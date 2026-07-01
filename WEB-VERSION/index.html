@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE ARCHITECTURE OF SHADOWS</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>THE ARCHITECTURE OF SHADOWS</h1>
+            <p class="subtitle">A Comprehensive Exploration of Hidden Control Systems</p>
+        </header>
+        
+        <nav class="main-nav">
+            <button class="nav-btn" onclick="showEdition('master')">Master Edition</button>
+            <button class="nav-btn" onclick="showEdition('student')">Student Edition</button>
+        </nav>
+        
+        <div id="content-area">
+            <div class="welcome">
+                <h2>Welcome to THE ARCHITECTURE OF SHADOWS</h2>
+                <p>Select an edition above to begin reading.</p>
+                
+                <div class="edition-info">
+                    <h3>Master Edition</h3>
+                    <p>Complete work including all 403 chapters across 16 volumes, including hidden and esoteric content.</p>
+                    
+                    <h3>Student Edition</h3>
+                    <p>Foundational content only, excluding hidden and esoteric volumes (IX, XIV, XV, XVI).</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="volume-nav" class="volume-nav hidden">
+            <h2>Volumes</h2>
+            <div id="volume-list"></div>
+        </div>
+        
+        <div id="chapter-content" class="chapter-content hidden">
+            <button class="back-btn" onclick="backToVolumes()">← Back to Volumes</button>
+            <div id="chapter-display"></div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
