@@ -1,0 +1,161 @@
+# =============================================================================
+# BUILD MANIFEST — Architecture of Shadows Book
+# =============================================================================
+# Authoritative record of how this project is built, tested and verified, and
+# of what is still broken. Read by Aetherius-OS's build manifest registry
+# (docs/BUILD-MANIFEST-REGISTRY.yaml) and validated by
+# src/programme/buildManifest.ts.
+#
+# This manifest used to describe an empty folder. The project was not empty:
+# it was a public repository, jayprophit/THE-ARCHITECTURE-OF-SHADOWS, that
+# had never been brought into the workspace. It is now, and the numbers below
+# are counted from the tree rather than described.
+# =============================================================================
+schema_version: "1.0.0"
+
+project:
+  id: architecture-of-shadows-book
+  name: Architecture of Shadows Book
+  kind: dataset
+  domain: aetherius-os
+  description: >-
+    A complete reference work on the global drug trade, in three editions: a
+    master edition of sixteen volumes and four hundred and three chapters, a
+    student edition of twelve volumes and three hundred and sixty four
+    chapters, and a web version. The text is Markdown, organised as front
+    matter, volumes, parts and chapters, and the outputs are PDF and EPUB
+    produced with Pandoc and XeLaTeX.
+  repository: https://github.com/jayprophit/THE-ARCHITECTURE-OF-SHADOWS
+  languages: [markdown, html, css, javascript]
+
+toolchain:
+  build_system: pandoc
+  package_manager: none
+  requirements:
+    - name: pandoc
+      required: true
+      purpose: Converts the Markdown chapters into PDF and EPUB.
+      status: NOT_INSTALLED
+    - name: xelatex
+      required: true
+      purpose: The PDF engine. XeLaTeX rather than PdfLaTeX because the
+        editions carry non-Latin text and need font selection.
+      status: NOT_INSTALLED
+  note: >-
+    Neither Pandoc nor a LaTeX distribution is installed on this machine, so
+    the build has never been run here. The build commands below are the
+    owner's own, recorded in BUILD-INSTRUCTIONS.md, and their globs were
+    checked against the tree and do match it.
+
+commands:
+  - name: build-master-pdf
+    command: >-
+      cd MASTER-EDITION && pandoc --pdf-engine=xelatex
+      --variable=geometry:margin=1in --variable fontsize=11pt --toc
+      --toc-depth=3 -o ../THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf
+      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
+    produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf
+  - name: build-master-epub
+    command: >-
+      cd MASTER-EDITION && pandoc --toc --toc-depth=3
+      -o ../THE-ARCHITECTURE-OF-SHADOWS-MASTER.epub
+      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
+    produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.epub
+  - name: build-student-pdf
+    command: >-
+      cd STUDENT-EDITION && pandoc --pdf-engine=xelatex
+      --variable=geometry:margin=1in --variable fontsize=11pt --toc
+      --toc-depth=3 -o ../THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
+      VOLUME-*/PART-*/chapter-*.md
+    produces: THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
+  - name: build-student-epub
+    command: >-
+      cd STUDENT-EDITION && pandoc --toc --toc-depth=3
+      -o ../THE-ARCHITECTURE-OF-SHADOWS-STUDENT.epub
+      VOLUME-*/PART-*/chapter-*.md
+    produces: THE-ARCHITECTURE-OF-SHADOWS-STUDENT.epub
+  - name: build-print-pdf
+    command: >-
+      cd MASTER-EDITION && pandoc --pdf-engine=xelatex
+      --variable=geometry:margin=0.75in --variable fontsize=10pt
+      --variable papersize:letter --toc --toc-depth=3
+      -o ../THE-ARCHITECTURE-OF-SHADOWS-PRINT.pdf
+      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
+    produces: THE-ARCHITECTURE-OF-SHADOWS-PRINT.pdf
+
+dependencies:
+  projects: []
+  external:
+    - name: pandoc
+      purpose: The converter for both output formats.
+    - name: xelatex
+      purpose: The PDF engine.
+    - name: latex-project
+      purpose: The LaTeX distribution that provides xelatex, through MiKTeX or
+        TeX Live on Windows.
+
+status:
+  state: CONTENT_PRESENT_TOOLCHAIN_ABSENT
+  last_verified: "2026-10-21"
+  summary: >-
+    The content is present and substantial: sixteen volumes, fifty-three
+    parts and four hundred and three chapters in the master edition; twelve
+    volumes, forty-six parts and three hundred and sixty four chapters in the
+    student edition; a web version; and a hundred and thirty eight
+    kilobyte text of the whole work. The toolchain is absent. Pandoc and
+    XeLaTeX are not installed on this machine, so no PDF or EPUB has been
+    built here and the build gate has never run for this project.
+  evidence:
+    - "Folder survey: 810 files in the tree, 782 tracked by the repository."
+    - "MASTER-EDITION: 16 volumes, 53 parts, 403 chapter-*.md files, 6 front matter files."
+    - "STUDENT-EDITION: 12 volumes, 46 parts, 364 chapter-*.md files."
+    - "WEB-VERSION: index.html, styles.css, script.js, README.md."
+    - "THE ARCHITECTURE OF SHADOWS.txt is 138,076 bytes."
+    - "pandoc: not installed. xelatex: not installed."
+
+known_issues:
+  - id: AOSB-001
+    severity: high
+    summary: >-
+      The document toolchain is not installed, so neither the PDF nor the EPUB
+      has ever been built on this machine and no build gate has ever run for
+      this project.
+    evidence: >-
+      pandoc and xelatex are both absent. The build commands are recorded
+      from the owner's BUILD-INSTRUCTIONS.md and their globs were checked
+      against the tree and do match it, so the commands are sound and the
+      toolchain is the missing part.
+    status: OPEN
+    todo_ref: TODO-AOSB-001
+  - id: AOSB-002
+    severity: low
+    summary: >-
+      The manifest for this project was not published with it. It lived in
+      the parent repository in a folder the parent ignores, so the registry
+      pointed at a file that a clone of the parent would not have.
+    evidence: >-
+      Aetherius-OS/.gitignore excludes books/Architecture of Shadows Book/
+      along with every other nested project repository, and git ls-files books
+      returned nothing.
+    status: RESOLVED
+    todo_ref: TODO-AOSB-002
+
+notes:
+  - >-
+    The book was a registered project whose content was never in the
+    workspace. The register described it accurately as an empty folder, and
+    that was the problem: the folder was empty, but the project was not. It
+    lives in a public repository, and it is now cloned into the place the
+    register names.
+  - >-
+    The three editions share no chapter file. The master edition carries the
+    hidden and esoteric material, the student edition the foundational
+    material, and the web version is a separate presentation. The manifest
+    records them as three separate builds rather than one build with a flag,
+    because the globs differ and the outputs are different books.
+  - >-
+    The MAT publication toolchain already provides a validated-record build,
+    a glossary build, a source-navigation build and a Playwright-backed
+    studio. A book of this size would be materially served by it, and the
+    owner's own instructions are recorded above so the two can be compared
+    rather than assumed.
