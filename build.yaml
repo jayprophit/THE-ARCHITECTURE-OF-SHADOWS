@@ -6,10 +6,12 @@
 # (docs/BUILD-MANIFEST-REGISTRY.yaml) and validated by
 # src/programme/buildManifest.ts.
 #
-# This manifest used to describe an empty folder. The project was not empty:
-# it was a public repository, jayprophit/THE-ARCHITECTURE-OF-SHADOWS, that
-# had never been brought into the workspace. It is now, and the numbers below
-# are counted from the tree rather than described.
+# This manifest used to describe an empty folder and then a book whose
+# toolchain had never run. Both statements are now out of date: the content is
+# present, a portable Pandoc and headless Edge are installed, and all four
+# artifacts have been built and structurally verified. The PDF is produced by
+# Chromium printing, not XeLaTeX; that difference is recorded below rather than
+# hidden.
 # =============================================================================
 schema_version: "1.0.0"
 
@@ -23,108 +25,124 @@ project:
     master edition of sixteen volumes and four hundred and three chapters, a
     student edition of twelve volumes and three hundred and sixty four
     chapters, and a web version. The text is Markdown, organised as front
-    matter, volumes, parts and chapters, and the outputs are PDF and EPUB
-    produced with Pandoc and XeLaTeX.
+    matter, volumes, parts and chapters. The built outputs are EPUB 3 and PDF:
+    EPUB from Pandoc, PDF from Pandoc HTML printed by headless Microsoft Edge.
   repository: https://github.com/jayprophit/THE-ARCHITECTURE-OF-SHADOWS
-  languages: [markdown, html, css, javascript]
+  languages: [markdown, html, css, javascript, python]
 
 toolchain:
-  build_system: pandoc
+  build_system: pandoc + headless chromium (build-book.py)
   package_manager: none
   requirements:
+    - name: python
+      version: ">=3.10"
+      required: true
+      purpose: Runs build-book.py and verify-book.py; no third-party package is used.
     - name: pandoc
+      version: "3.13"
       required: true
-      purpose: Converts the Markdown chapters into PDF and EPUB.
-      status: NOT_INSTALLED
+      purpose: Converts the Markdown tree to EPUB 3 and to the standalone HTML that is printed to PDF.
+    - name: microsoft-edge
+      version: "156.0.4314.50"
+      required: true
+      purpose: Prints the Pandoc HTML to PDF in headless mode. Any recent Chromium browser can be substituted with the EDGE environment variable.
     - name: xelatex
-      required: true
-      purpose: The PDF engine. XeLaTeX rather than PdfLaTeX because the
-        editions carry non-Latin text and need font selection.
-      status: NOT_INSTALLED
+      required: false
+      purpose: The original documented PDF engine. It is not installed, so the PDF is A4 Chromium print output rather than the XeLaTeX layout in BUILD-INSTRUCTIONS.md.
   note: >-
-    Neither Pandoc nor a LaTeX distribution is installed on this machine, so
-    the build has never been run here. The build commands below are the
-    owner's own, recorded in BUILD-INSTRUCTIONS.md, and their globs were
-    checked against the tree and do match it.
+    Pandoc is the portable 3.13 build at
+    C:\Users\jpowe\AppData\Local\Temp\opencode\pandoc-3.13\pandoc-3.13\pandoc.exe.
+    Edge is at C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe.
+    build-book.py also accepts the PANDOC and EDGE environment variables, so
+    the paths are not baked into the book. No LaTeX distribution is installed.
 
 commands:
-  - name: build-master-pdf
-    command: >-
-      cd MASTER-EDITION && pandoc --pdf-engine=xelatex
-      --variable=geometry:margin=1in --variable fontsize=11pt --toc
-      --toc-depth=3 -o ../THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf
-      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
-    produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf
+  - name: build
+    command: python build-book.py --edition all --format all
+    working_directory: .
+    timeout_minutes: 30
+    produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.epub, THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf, THE-ARCHITECTURE-OF-SHADOWS-STUDENT.epub, THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
   - name: build-master-epub
-    command: >-
-      cd MASTER-EDITION && pandoc --toc --toc-depth=3
-      -o ../THE-ARCHITECTURE-OF-SHADOWS-MASTER.epub
-      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
+    command: python build-book.py --edition master --format epub
+    working_directory: .
+    timeout_minutes: 10
     produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.epub
-  - name: build-student-pdf
-    command: >-
-      cd STUDENT-EDITION && pandoc --pdf-engine=xelatex
-      --variable=geometry:margin=1in --variable fontsize=11pt --toc
-      --toc-depth=3 -o ../THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
-      VOLUME-*/PART-*/chapter-*.md
-    produces: THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
+  - name: build-master-pdf
+    command: python build-book.py --edition master --format pdf
+    working_directory: .
+    timeout_minutes: 20
+    produces: THE-ARCHITECTURE-OF-SHADOWS-MASTER.pdf
   - name: build-student-epub
-    command: >-
-      cd STUDENT-EDITION && pandoc --toc --toc-depth=3
-      -o ../THE-ARCHITECTURE-OF-SHADOWS-STUDENT.epub
-      VOLUME-*/PART-*/chapter-*.md
+    command: python build-book.py --edition student --format epub
+    working_directory: .
+    timeout_minutes: 10
     produces: THE-ARCHITECTURE-OF-SHADOWS-STUDENT.epub
-  - name: build-print-pdf
-    command: >-
-      cd MASTER-EDITION && pandoc --pdf-engine=xelatex
-      --variable=geometry:margin=0.75in --variable fontsize=10pt
-      --variable papersize:letter --toc --toc-depth=3
-      -o ../THE-ARCHITECTURE-OF-SHADOWS-PRINT.pdf
-      00-FRONT-MATTER/*.md VOLUME-*/PART-*/chapter-*.md
-    produces: THE-ARCHITECTURE-OF-SHADOWS-PRINT.pdf
+  - name: build-student-pdf
+    command: python build-book.py --edition student --format pdf
+    working_directory: .
+    timeout_minutes: 20
+    produces: THE-ARCHITECTURE-OF-SHADOWS-STUDENT.pdf
+  - name: verify
+    command: python verify-book.py
+    working_directory: .
+    timeout_minutes: 5
+    requires: [build]
+  - name: verify-strict
+    command: python verify-book.py --strict
+    working_directory: .
+    timeout_minutes: 5
+    requires: [build]
 
 dependencies:
   projects: []
   external:
     - name: pandoc
-      purpose: The converter for both output formats.
-    - name: xelatex
-      purpose: The PDF engine.
-    - name: latex-project
-      purpose: The LaTeX distribution that provides xelatex, through MiKTeX or
-        TeX Live on Windows.
+      purpose: The converter for EPUB and HTML.
+    - name: microsoft-edge
+      purpose: The headless Chromium that prints the HTML to PDF.
+    - name: python
+      purpose: Runs the two dependency-free build and verification scripts.
 
 status:
   state: PARTIAL
-  last_verified: "2026-10-21"
+  last_verified: "2026-10-29"
   summary: >-
-    The content is present and substantial: sixteen volumes, fifty-three
-    parts and four hundred and three chapters in the master edition; twelve
-    volumes, forty-six parts and three hundred and sixty four chapters in the
-    student edition; a web version; and a hundred and thirty eight
-    kilobyte text of the whole work. The toolchain is absent. Pandoc and
-    XeLaTeX are not installed on this machine, so no PDF or EPUB has been
-    built here and the build gate has never run for this project.
+    The content is present and substantial: sixteen volumes, fifty-three parts
+    and four hundred and three chapters in the master edition; twelve volumes,
+    forty-six parts and three hundred and sixty four chapters in the student
+    edition; a web version; and a hundred and thirty eight kilobyte transcript.
+    All four artifacts were built on 2026-10-29: master EPUB 0.57 MB with 410
+    spine items, master PDF 8.60 MB with 462 pages, student EPUB 0.51 MB with
+    365 spine items, and student PDF 7.47 MB with 397 pages. The build and the
+    structural verification are reproducible through build-book.py and
+    verify-book.py. The state remains PARTIAL because the PDF is A4 Chromium
+    print output rather than the documented XeLaTeX layout, there is no
+    print-ready letter PDF, the title page still carries three metadata
+    placeholders, the title and copyright pages say 17-Volume on a 16-volume
+    tree, and no epubcheck or editorial accuracy review has been run.
   evidence:
-    - "Folder survey: 810 files in the tree, 782 tracked by the repository."
-    - "MASTER-EDITION: 16 volumes, 53 parts, 403 chapter-*.md files, 6 front matter files."
-    - "STUDENT-EDITION: 12 volumes, 46 parts, 364 chapter-*.md files."
-    - "WEB-VERSION: index.html, styles.css, script.js, README.md."
-    - "THE ARCHITECTURE OF SHADOWS.txt is 138,076 bytes."
-    - "pandoc: not installed. xelatex: not installed."
+    - "2026-10-29: python build-book.py --edition all --format all -> exit 0; four artifacts rebuilt from the Markdown tree."
+    - "MASTER EPUB: 600,028 bytes (0.57 MB), 416 ZIP entries, 410 XHTML documents, 410 spine items, nav.xhtml present, 0 malformed XML, dc:title and dc:language en-GB present."
+    - "MASTER PDF: 9,022,742 bytes (8.60 MB), header %PDF-1.4, 462 pages, 462 /Type /Page objects, producer Skia/PDF m156."
+    - "STUDENT EPUB: 530,026 bytes (0.51 MB), 371 ZIP entries, 365 XHTML documents, 365 spine items, 0 malformed XML."
+    - "STUDENT PDF: 7,833,682 bytes (7.47 MB), header %PDF-1.4, 397 pages, 397 /Type /Page objects."
+    - "2026-10-29: python verify-book.py -> PASS; four artifacts and both source trees match the manifest; four content findings reported as warnings."
+    - "Sources: MASTER-EDITION 16 volumes / 53 parts / 403 chapters / 6 front-matter files / 0 empty chapters; STUDENT-EDITION 12 volumes / 46 parts / 364 chapters / 0 empty chapters."
+    - "Inputs: 409 Markdown files for the master edition (6 front matter + 403 chapters) and 364 for the student edition."
+    - "Pandoc 3.13 and Microsoft Edge 156.0.4314.50 were present and used. xelatex was absent."
 
 known_issues:
   - id: AOSB-001
     severity: high
     summary: >-
-      The document toolchain is not installed, so neither the PDF nor the EPUB
-      has ever been built on this machine and no build gate has ever run for
-      this project.
+      The PDF is printed from HTML by headless Edge at A4 with CSS margins. It
+      is not the XeLaTeX layout described in BUILD-INSTRUCTIONS.md, and there
+      is no print-ready letter-size PDF.
     evidence: >-
-      pandoc and xelatex are both absent. The build commands are recorded
-      from the owner's BUILD-INSTRUCTIONS.md and their globs were checked
-      against the tree and do match it, so the commands are sound and the
-      toolchain is the missing part.
+      No LaTeX distribution is installed. build-book.py builds standalone
+      HTML and calls msedge --headless=new --print-to-pdf. The resulting files
+      report producer Skia/PDF m156 and are A4, not letter. The documented
+      xelatex commands have not been run.
     status: OPEN
     todo_ref: TODO-AOSB-001
   - id: AOSB-002
@@ -139,6 +157,64 @@ known_issues:
       returned nothing.
     status: FIXED
     todo_ref: TODO-AOSB-002
+  - id: AOSB-003
+    severity: medium
+    summary: >-
+      The title page still contains the placeholders [Author Name],
+      [Publisher Name] and [ISBN Number]. They are present in both the source
+      and the built EPUB.
+    evidence: >-
+      MASTER-EDITION/00-FRONT-MATTER/title-page.md lines for Author, Publisher
+      and ISBN. verify-book.py reports all three. No value has been invented.
+    status: OPEN
+    todo_ref: TODO-AOSB-003
+  - id: AOSB-004
+    severity: medium
+    summary: >-
+      The title page and copyright page describe a 17-Volume set, but the
+      master tree contains 16 volumes (VOLUME-I to VOLUME-XVI).
+    evidence: >-
+      MASTER-EDITION/00-FRONT-MATTER/title-page.md and copyright.md contain
+      "17-Volume"; MASTER-EDITION has 16 VOLUME-* directories. verify-book.py
+      reports the mismatch.
+    status: OPEN
+    todo_ref: TODO-AOSB-004
+  - id: AOSB-005
+    severity: medium
+    summary: >-
+      No epubcheck run and no editorial accuracy review. The verification is
+      structural: ZIP container, OPF, spine, XML well-formedness and PDF page
+      counts. It says nothing about whether the prose is correct, sourced or
+      safe to publish.
+    evidence: >-
+      verify-book.py performs XML and page-count checks only. epubcheck is not
+      installed. No fact-check, legal review or source audit of the 403
+      chapters was performed in this pass.
+    status: OPEN
+    todo_ref: TODO-AOSB-005
+  - id: AOSB-006
+    severity: low
+    summary: >-
+      The book carries two tables of contents: the Pandoc-generated navigation
+      document and the hand-written 00-FRONT-MATTER/table-of-contents.md.
+    evidence: >-
+      The master EPUB has nav.xhtml plus 410 XHTML documents; one of the front
+      matter documents is table-of-contents.md. The built HTML contains one
+      nav#TOC and one "TABLE OF CONTENTS" heading.
+    status: OPEN
+    todo_ref: TODO-AOSB-006
+  - id: AOSB-007
+    severity: low
+    summary: >-
+      The root transcript file is not the build source. The editions are built
+      from the chapter tree, and the 138 KB text is a separate transcript that
+      has not been reconciled with the chapters.
+    evidence: >-
+      build-book.py reads MASTER-EDITION/00-FRONT-MATTER/*.md and
+      VOLUME-*/PART-*/chapter-*.md, and the student equivalents. It never reads
+      "THE ARCHITECTURE OF SHADOWS.txt".
+    status: ACCEPTED
+    todo_ref: TODO-AOSB-007
 
 notes:
   - >-
@@ -150,9 +226,17 @@ notes:
   - >-
     The three editions share no chapter file. The master edition carries the
     hidden and esoteric material, the student edition the foundational
-    material, and the web version is a separate presentation. The manifest
-    records them as three separate builds rather than one build with a flag,
-    because the globs differ and the outputs are different books.
+    material, and the web version is a separate presentation. The build script
+    treats master and student as two builds because the front matter and the
+    chapter set differ.
+  - >-
+    build-book.py writes a Pandoc defaults file inside a temporary directory
+    rather than passing 409 paths on the command line. This avoids the Windows
+    command-line length limit and makes the build reproducible.
+  - >-
+    verify-book.py is a structural gate, not a content gate. Run it with
+    --strict to make the three placeholders and the 17-vs-16 volume label
+    fail; that is expected until the owner decides the metadata.
   - >-
     The MAT publication toolchain already provides a validated-record build,
     a glossary build, a source-navigation build and a Playwright-backed
